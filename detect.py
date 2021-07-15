@@ -1,12 +1,9 @@
 from __future__               import print_function
-from typing                   import Type
-from imutils.convenience import resize
 from imutils.object_detection import non_max_suppression
 from helper                   import find_fg_objects
 
 import numpy as np
 import cv2 as cv
-import imutils
 
 def detect_people():
     # Model background using Gaussian Mixture Model.
@@ -19,8 +16,7 @@ def detect_people():
     
     # Access the image stream.
     cap = cv.VideoCapture('C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\data\\%03d.png', cv.CAP_IMAGES)
-    initBB = None
-    firstFrame = True
+    firstFrame = None
 
     if not cap.isOpened():
         print('Unable to open')
@@ -33,15 +29,23 @@ def detect_people():
             break
 
         # Resize frame for faster processing.
-        resized = imutils.resize(frame, width=min(400, frame.shape[1]))
+        resized = cv.resize(frame, (400, 300))
         # Greyscale of resized image.
         grey = cv.cvtColor(resized, cv.COLOR_BGR2GRAY)
         (H, W) = resized.shape[:2]
 
-        ### --- GMM background subtraction --- ###
-        fgMask = backSub.apply(resized)
-        contours = cv.findContours(fgMask.copy(), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-        contours = imutils.grab_contours(contours)
+        # Initialise first frame.
+        if firstFrame is None:
+            firstFrame = grey
+            cv.imwrite("C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\result_simplebgsub\\frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png", resized)
+            continue
+
+        ### --- Static background subtraction --- ###
+        img_diff = cv.absdiff(firstFrame, grey)
+        # Threshold image
+        ret, thresh = cv.threshold(img_diff, 25, 255, cv.THRESH_BINARY)
+        thresh = cv.dilate(thresh, None, iterations=2)
+        contours = cv.findContours(thresh.copy(), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)[0]
         # Draw bounding rectangles around detected diff.
         boxes = []
         for c in contours:
@@ -71,62 +75,32 @@ def detect_people():
 
         ### --- Object on ground detection --- ###
         path = []
+        # TODO: Take bottom third of pick_human rectangles to model path.
+        
 
-
-        # GMM background subtraction in red
-        #for (startX, startY, endX, endY) in pick:
-                    #cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 255), 2)
-
+        # Background subtraction in red
+        for (startX, startY, endX, endY) in pick:
+                    cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 255), 2)
+        
         # HOG for human detection in blue
-        #for (startX, startY, endX, endY) in pick_hog:
-                    #cv.rectangle(resized, (startX, startY), (endX, endY), (255, 0, 0), 2)
+        for (startX, startY, endX, endY) in pick_hog:
+                    cv.rectangle(resized, (startX, startY), (endX, endY), (255, 0, 0), 2)
 
         # Union in green
-        #if pick_human != []:
-        #    for (startX, startY, endX, endY) in pick_human:
-        #        cv.rectangle(resized, (startX, startY), (endX, endY), (0, 255, 0), 2)
-
-        ### --- MOSSE tracker --- ###
-        # Check whether an object is already being tracked.
-        if initBB is not None:
-            (success, box) = tracker.update(resized)
-
-            if success:
-                (x, y, w, h) = [int(v) for v in box]
-                # Yellow rectangle around succesfully-tracked objects.
-                cv.rectangle(resized, (x, y), (x + w, y + h), (0, 255, 255), 2)
-
-                # TODO: Approximate walking path by taking lower eighth of rectangle and half the width in the centre.
-
-                # TODO: Save walking path and pass on to object detection.
-
-            else:
-                initBB = None
-                #print("Tracking failed! Restarting initialisation...")
-
-        # If a moving object has been detected, start tracking it.
-        if pick_human != [] and firstFrame == False:
-            #print("Initialising tracker...")
-            #print("pick_human in frame " + str(cap.get(cv .CAP_PROP_POS_FRAMES)) + ": " + str(pick_human))
-            initBB = [pick_human[0][0], pick_human[0][1], pick_human[0][2], pick_human[0][3]]
-            #print("initBB: " + str(initBB))
-            # Purple rectangle around detected objects.
-            cv.rectangle(resized, (pick_human[0,0], pick_human[0,1]), (pick_human[0,2],pick_human[0,3]), (128,0,128), 2)
-            tracker.init(resized, initBB)
-
+        if pick_human != []:
+            for (startX, startY, endX, endY) in pick_human:
+                cv.rectangle(resized, (startX, startY), (endX, endY), (0, 255, 0), 2)
+        
         cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
         cv.putText(resized, str(cap.get(cv .CAP_PROP_POS_FRAMES)), (15,15),
                     cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
         
         cv.imshow("Frame", resized)
-        #cv.imwrite("C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\result_track\\frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png", resized)
+        cv.imwrite("C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\result_simplebgsub\\frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png", resized)
         
         keyboard = cv.waitKey(30)
         if keyboard == 'q' or keyboard == 27:
             break
-
-        # Prevent first frame being picked up by tracker.
-        firstFrame = False
         
     cap.release()
 
