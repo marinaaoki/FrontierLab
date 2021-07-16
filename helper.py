@@ -28,16 +28,47 @@ def area_of_intersection(a,b):
     dy = intersect[3] - intersect[1]
     return dx * dy
 
-# Returns the are of the given rectangle.
+# Returns the area of the given rectangle.
 def area(a):
     dx = a[2] - a[0]
     dy = a[3] - a[1]
     return dx * dy
 
+# Takes a given rectangle and returns the rectangle comprising of the bottom third widthwise and middle third lengthwise.
+def thirdof(a):
+    w = a[2] - a[0]
+    h = a[3] - a[1]
+    x1 = a[0] + (w // 3)
+    y1 = a[1] + ((h // 3) * 2)
+    x2 = a[2] - (w // 3)
+    y2 = a[3]
+
+    return [x1, y1, x2, y2]
+
+# Given a list of rectangles representing a modeled path and objects, finds the intersections between each and returns as list of (idx1,idx2,area).
+def find_intersections(path, objects, intersections):
+    for idx1, rect1 in enumerate(path):
+            for idx2, rect2 in enumerate(objects):
+                # If there is an intersection, store (idx1,idx2,area) in a list that is passed on to the next frame.
+                if intersection(rect1, rect2) != [0,0,0,0]:
+                    intersect_area = area_of_intersection(rect1,rect2)
+                    # Iterate through intersections list and check whether rect1, rect2 are already in it.
+                    inlist = False
+                    for index, (i1,i2,a,d) in enumerate(intersections):
+                        if (idx1 == i1) and (idx2 == i2):
+                            inlist = True
+                            if intersect_area == a:
+                                del intersections[index]
+                                intersections.append((idx1,idx2,intersect_area,1))
+                    if not inlist:
+                        intersections.append((idx1,idx2,intersect_area,0))
+    return intersections
+
 # Determine foreground objects from rectangles detected by background subtraction and HOG feature descriptor.
 def find_fg_objects(pick_fg, pick_hog, threshold):
     pick_total = []
-    for rect1 in pick_fg:
+    to_delete = []
+    for idx, rect1 in enumerate(pick_fg):
         for rect2 in pick_hog:
             # If there is an intersection that takes up at least the given threshold of pick_hog rectangle, take union of both boxes.
             if intersection(rect1, rect2) != [0,0,0,0]:
@@ -45,4 +76,9 @@ def find_fg_objects(pick_fg, pick_hog, threshold):
                 if fraction >= threshold:
                     union_of = union(rect1, rect2)
                     pick_total.append(union_of)
-    return pick_total
+                    # Store a list of indexes to remove from pick_fg.
+                    to_delete.append(idx)
+    to_delete = list(set(to_delete))
+    for idx in to_delete:
+        pick_fg = np.delete(pick_fg, obj=idx, axis=0)
+    return pick_total, pick_fg

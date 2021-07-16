@@ -1,6 +1,6 @@
 from __future__               import print_function
 from imutils.object_detection import non_max_suppression
-from helper                   import find_fg_objects
+from helper                   import find_fg_objects, thirdof, find_intersections
 
 import numpy as np
 import cv2 as cv
@@ -17,6 +17,10 @@ def detect_people():
     # Access the image stream.
     cap = cv.VideoCapture('C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\data\\%03d.png', cv.CAP_IMAGES)
     firstFrame = None
+    # Rectangles modeling frequently used path.
+    path = []
+    # Tuples of (idx1,idx2,area) storing intersections between objects and path rectangles.
+    intersections = []
 
     if not cap.isOpened():
         print('Unable to open')
@@ -69,34 +73,47 @@ def detect_people():
         pick_hog = non_max_suppression(rects, overlapThresh=0.65)
            
         # Check whether "humans" detected by HOG are part of detected foreground.
-        pick_human = find_fg_objects(pick, pick_hog, 0.25)
+        pick_human, pick = find_fg_objects(pick, pick_hog, 0.25)
         pick_human = np.array([[x, y, w, h] for [x, y, w, h] in pick_human])
         pick_human = non_max_suppression(pick_human, overlapThresh=0.65)
 
         ### --- Object on ground detection --- ###
-        path = []
-        # TODO: Take bottom third of pick_human rectangles to model path.
-        
+        for rect in pick_human:
+            # Take bottom third of pick_human rectangles to model path.
+            path.append(thirdof(rect))
+        # Checking intersection of each rectangle in path and pick.
+        intersections = find_intersections(path, pick, intersections)
+
+        # Iterate through the intersections to find objects that have been determined to be dangerous.
+        for (idx1,idx2,area,danger) in intersections:
+            if danger:
+                (startX, startY, endX, endY) = pick[idx2]
+                # Draw red rectangle around detected dangerous object.
+                cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 255), 2)
 
         # Background subtraction in red
-        for (startX, startY, endX, endY) in pick:
-                    cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 255), 2)
+        #for (startX, startY, endX, endY) in pick:
+        #            cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 255), 2)
         
         # HOG for human detection in blue
-        for (startX, startY, endX, endY) in pick_hog:
-                    cv.rectangle(resized, (startX, startY), (endX, endY), (255, 0, 0), 2)
+        #for (startX, startY, endX, endY) in pick_hog:
+        #            cv.rectangle(resized, (startX, startY), (endX, endY), (255, 0, 0), 2)
 
         # Union in green
-        if pick_human != []:
-            for (startX, startY, endX, endY) in pick_human:
-                cv.rectangle(resized, (startX, startY), (endX, endY), (0, 255, 0), 2)
+        #if pick_human != []:
+        #    for (startX, startY, endX, endY) in pick_human:
+        #        cv.rectangle(resized, (startX, startY), (endX, endY), (0, 255, 0), 2)
+
+        # Rectangles used to model path in white
+        #for (startX, startY, endX, endY) in path:
+        #            cv.rectangle(resized, (startX, startY), (endX, endY), (255, 255, 255), 2)
         
         cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
         cv.putText(resized, str(cap.get(cv .CAP_PROP_POS_FRAMES)), (15,15),
                     cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
         
         cv.imshow("Frame", resized)
-        cv.imwrite("C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\result_simplebgsub\\frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png", resized)
+        cv.imwrite("C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\result_objdet\\frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png", resized)
         
         keyboard = cv.waitKey(30)
         if keyboard == 'q' or keyboard == 27:
