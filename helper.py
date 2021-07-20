@@ -1,6 +1,7 @@
 from __future__ import print_function
 import numpy as np
 
+# Returns the coordinates of the union of the two rectangles.
 def union(a,b):
     x1 = min(a[0], b[0])
     y1 = min(a[1], b[1])
@@ -8,6 +9,7 @@ def union(a,b):
     y2 = max(a[3], b[3])
     return [x1, y1, x2, y2]
 
+# Returns the coordinates of the intersection of the two rectangles.
 def intersection(a,b):
     x1 = max(a[0], b[0])
     y1 = max(a[1], b[1])
@@ -47,22 +49,22 @@ def thirdof(a):
 
 # Given a list of rectangles representing a modeled path and objects, finds the intersections between each and returns as list of (idx1,idx2,area).
 def find_intersections(path, objects, intersections):
+    new_intersections = []
     for idx1, rect1 in enumerate(path):
-            for idx2, rect2 in enumerate(objects):
-                # If there is an intersection, store (idx1,idx2,area) in a list that is passed on to the next frame.
-                if intersection(rect1, rect2) != [0,0,0,0]:
-                    intersect_area = area_of_intersection(rect1,rect2)
-                    # Iterate through intersections list and check whether rect1, rect2 are already in it.
-                    inlist = False
-                    for index, (i1,i2,a,d) in enumerate(intersections):
-                        if (idx1 == i1) and (idx2 == i2):
-                            inlist = True
-                            if intersect_area == a:
-                                del intersections[index]
-                                intersections.append((idx1,idx2,intersect_area,1))
-                    if not inlist:
-                        intersections.append((idx1,idx2,intersect_area,0))
-    return intersections
+        for idx2, rect2 in enumerate(objects):
+            # If there is an intersection, store (idx1,idx2,area) in a list that is passed on to the next frame.
+            intersect_area = area_of_intersection(rect1,rect2)
+            # Iterate through intersections list and check whether rect1, rect2 are already in it.
+            inlist = False
+            for index, (i1,i2,a,d) in enumerate(intersections):
+                if (idx1 == i1) and (idx2 == i2):
+                    inlist = True
+                    if intersect_area == a:
+                        del intersections[index]
+                        new_intersections.append((idx1,idx2,intersect_area,1))
+            if (not inlist) and (intersect_area != 0):
+                new_intersections.append((idx1,idx2,intersect_area,0))
+    return new_intersections
 
 # Determine foreground objects from rectangles detected by background subtraction and HOG feature descriptor.
 def find_fg_objects(pick_fg, pick_hog, threshold):
