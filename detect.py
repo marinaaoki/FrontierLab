@@ -6,7 +6,7 @@ import numpy as np
 import cv2 as cv
 import os
 
-def detect_people(folder, source):
+def detect_people(folder, source, access_lvl=3):
     # Model background using Gaussian Mixture Model.
     backSub = cv.createBackgroundSubtractorMOG2()
 
@@ -98,19 +98,41 @@ def detect_people(folder, source):
         #            cv.rectangle(resized, (startX, startY), (endX, endY), (255, 0, 0), 2)
 
         # Union in green
-        for (startX, startY, endX, endY) in pick_human:
-            cv.rectangle(resized, (startX, startY), (endX, endY), (0, 255, 0), 2)
+        #for (startX, startY, endX, endY) in pick_human:
+        #    cv.rectangle(resized, (startX, startY), (endX, endY), (0, 255, 0), 2)
 
         # Rectangles used to model path in white
         #for (startX, startY, endX, endY) in path:
         #        cv.rectangle(resized, (startX, startY), (endX, endY), (255, 255, 255), 2)
+
+        ### --- INFORMATION DISCLOSURE --- ###
+        blurred = cv.blur(resized, (15,15), 0)
+        if access_lvl == 1:
+            # Tier 1: Blur out only people to preserve privacy.
+            mask = np.zeros(resized.shape[:2], dtype="uint8")
+            for rect in pick_human:
+                (startX, startY, endX, endY) = rect
+                cv.rectangle(mask, (startX, startY), (endX, endY), (255, 255, 255), -1)
+            resized[mask>0] = blurred[mask>0]
+        elif access_lvl == 2:
+            # Tier 2: Blur out everything except for the dangerous object that was detected.
+            mask = np.zeros(resized.shape[:2], dtype="uint8")
+            for (idx1,idx2,area,danger) in intersections:
+                if danger:
+                    (startX, startY, endX, endY) = pick[idx2]
+                    cv.rectangle(mask, (startX, startY), (endX, endY), (255, 255, 255), -1)
+            mask = cv.bitwise_not(mask)
+            resized[mask>0] = blurred[mask>0]
+        elif access_lvl == 3:
+            # Tier 3: Send out only textual data -> blur everything and place text on top?
+            resized = blurred
 
         # Iterate through the intersections to find objects that have been determined to be dangerous.
         for (idx1,idx2,area,danger) in intersections:
             if danger:
                 (startX, startY, endX, endY) = pick[idx2]
                 # Draw black rectangle around detected dangerous object.
-                cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 0), 2)
+                cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 255), 2)
                 cv.putText(resized, "DANGEROUS OBJECT DETECTED", (15,30),
                     cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
         
@@ -119,7 +141,7 @@ def detect_people(folder, source):
                     cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
         
         cv.imshow("Frame", resized)
-        cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)
+        #cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)
         
         keyboard = cv.waitKey(30)
         if keyboard == 'q' or keyboard == 27:

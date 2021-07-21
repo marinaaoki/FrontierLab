@@ -9,7 +9,7 @@ import os
 
 if __name__ == '__main__':
     source = 'C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\data'
-    folder = "C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\results\\result_final_0.30"
+    folder = "C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\results\\result_blurred3"
 
     #p1 = Process(target=create_stream)
     #p1.start()
@@ -23,5 +23,5 @@ if __name__ == '__main__':
 
     #create_stream(source)
     #save_video(source)
-    detect_people(folder, source)
-    #save_video(folder)
+    detect_people(folder, source, 3)
+    save_video(folder)
