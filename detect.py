@@ -4,8 +4,9 @@ from helper                   import find_fg_objects, thirdof, find_intersection
 
 import numpy as np
 import cv2 as cv
+import os
 
-def detect_people():
+def detect_people(folder, source):
     # Model background using Gaussian Mixture Model.
     backSub = cv.createBackgroundSubtractorMOG2()
 
@@ -15,7 +16,7 @@ def detect_people():
     tracker = cv.legacy.TrackerMOSSE_create()
     
     # Access the image stream.
-    cap = cv.VideoCapture('C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\data\\%03d.png', cv.CAP_IMAGES)
+    cap = cv.VideoCapture(os.path.join(source,'%03d.png'), cv.CAP_IMAGES)
     firstFrame = None
     # Rectangles modeling frequently used path.
     path = []
@@ -41,7 +42,10 @@ def detect_people():
         # Initialise first frame.
         if firstFrame is None:
             firstFrame = grey
-            cv.imwrite("C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\result_simplebgsub\\frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png", resized)
+            cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
+            cv.putText(resized, str(cap.get(cv .CAP_PROP_POS_FRAMES)), (15,15),
+                    cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+            cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)
             continue
 
         ### --- Static background subtraction --- ###
@@ -73,7 +77,7 @@ def detect_people():
         pick_hog = non_max_suppression(rects, overlapThresh=0.65)
            
         # Check whether "humans" detected by HOG are part of detected foreground.
-        pick_human, pick = find_fg_objects(pick, pick_hog, 0.4)
+        pick_human, pick = find_fg_objects(pick, pick_hog, 0.3)
         pick_human = np.array([[x, y, w, h] for [x, y, w, h] in pick_human])
         pick_human = non_max_suppression(pick_human, overlapThresh=0.65)
 
@@ -98,8 +102,8 @@ def detect_people():
             cv.rectangle(resized, (startX, startY), (endX, endY), (0, 255, 0), 2)
 
         # Rectangles used to model path in white
-        for (startX, startY, endX, endY) in path:
-                cv.rectangle(resized, (startX, startY), (endX, endY), (255, 255, 255), 2)
+        #for (startX, startY, endX, endY) in path:
+        #        cv.rectangle(resized, (startX, startY), (endX, endY), (255, 255, 255), 2)
 
         # Iterate through the intersections to find objects that have been determined to be dangerous.
         for (idx1,idx2,area,danger) in intersections:
@@ -107,13 +111,15 @@ def detect_people():
                 (startX, startY, endX, endY) = pick[idx2]
                 # Draw black rectangle around detected dangerous object.
                 cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 0), 2)
+                cv.putText(resized, "DANGEROUS OBJECT DETECTED", (15,30),
+                    cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
         
         cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
         cv.putText(resized, str(cap.get(cv .CAP_PROP_POS_FRAMES)), (15,15),
                     cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
         
         cv.imshow("Frame", resized)
-        cv.imwrite("C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\result_final_pathmodel\\frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png", resized)
+        cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)
         
         keyboard = cv.waitKey(30)
         if keyboard == 'q' or keyboard == 27:

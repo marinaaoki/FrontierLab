@@ -4,6 +4,7 @@ from PIL        import Image
 from io         import StringIO
 
 import urllib.request
+import os
 
 # Save 2 frames per second from the webcam.
 def save_frame(count):
@@ -17,7 +18,8 @@ def save_frame(count):
     print("Saved frame " + f"{count:03}")
 
 # Run loop to save stream.
-def create_stream():
+def create_stream(source):
+    os.chdir(source)
     count = 0
     while True:
         save_frame(count)

@@ -1,5 +1,8 @@
 from __future__ import print_function
 import numpy as np
+import cv2 as cv
+import glob
+import os
 
 # Returns the coordinates of the union of the two rectangles.
 def union(a,b):
@@ -81,6 +84,20 @@ def find_fg_objects(pick_fg, pick_hog, threshold):
                     # Store a list of indexes to remove from pick_fg.
                     to_delete.append(idx)
     to_delete = list(set(to_delete))
-    for idx in to_delete:
-        pick_fg = np.delete(pick_fg, obj=idx, axis=0)
+    if to_delete != []:
+        pick_fg = np.delete(pick_fg, to_delete, axis=0)
     return pick_total, pick_fg
+
+# Save all the image files in a folder as a video.
+def save_video(folder):
+    img_array = []
+    for filename in sorted(glob.glob(os.path.join(folder, "*.png")), key=len):
+        img = cv.imread(filename)
+        height, width, layers = img.shape
+        size = (width, height)
+        img_array.append(img)
+    out = cv.VideoWriter(os.path.join(folder,"video.avi"), cv.VideoWriter_fourcc(*'DIVX'), 15, size)
+
+    for i in range(len(img_array)):
+        out.write(img_array[i])
+    out.release()
