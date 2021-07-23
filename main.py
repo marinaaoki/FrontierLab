@@ -8,8 +8,8 @@ from helper          import save_video
 import os
 
 if __name__ == '__main__':
-    source = 'C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\data'
-    folder = "C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\results\\result_blurred3"
+    source = "C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\data"
+    folder = "C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\results\\result_trajectory"
 
     #p1 = Process(target=create_stream)
     #p1.start()
@@ -23,5 +23,5 @@ if __name__ == '__main__':
 
     #create_stream(source)
     #save_video(source)
-    detect_people(folder, source, 3)
+    detect_people(folder, source, access_lvl=1)
     save_video(folder)

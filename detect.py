@@ -1,6 +1,6 @@
 from __future__               import print_function
 from imutils.object_detection import non_max_suppression
-from helper                   import find_fg_objects, thirdof, find_intersections
+from helper                   import find_fg_objects, thirdof, centreof, find_intersections
 
 import numpy as np
 import cv2 as cv
@@ -20,6 +20,8 @@ def detect_people(folder, source, access_lvl=3):
     firstFrame = None
     # Rectangles modeling frequently used path.
     path = []
+    # Centres of rectangles to enable trajectory modeling.
+    centres = []
     # Tuples of (idx1,idx2,area) storing intersections between objects and path rectangles.
     intersections = []
 
@@ -37,7 +39,8 @@ def detect_people(folder, source, access_lvl=3):
         resized = cv.resize(frame, (400, 300))
         # Greyscale of resized image.
         grey = cv.cvtColor(resized, cv.COLOR_BGR2GRAY)
-        (H, W) = resized.shape[:2]
+        # Extract height and width for full-body detection.
+        (HEIGHT, WIDTH) = resized.shape[:2]
 
         # Initialise first frame.
         if firstFrame is None:
@@ -81,10 +84,22 @@ def detect_people(folder, source, access_lvl=3):
         pick_human = np.array([[x, y, w, h] for [x, y, w, h] in pick_human])
         pick_human = non_max_suppression(pick_human, overlapThresh=0.65)
 
-        ### --- Object on ground detection --- ###
+        ### --- Path modeling --- ###
         for rect in pick_human:
             # Take bottom third of pick_human rectangles to model path.
-            path.append(thirdof(rect))
+            # Only if the rectangle is at least a certain height (1/3 of the total frame height)
+            h = rect[3] - rect[1]
+            w = rect[2] - rect[0]
+            if h <= HEIGHT // 3 or w <= WIDTH // 3:
+                step = thirdof(rect)
+                path.append(step)
+                centres.append(centreof(step))
+
+        ### -- Drawing trajectory --- ###
+        #for p1, p2 in zip(centres, centres[1:]):
+        #    cv.arrowedLine(resized, p1, p2, (255,0,0), 2)
+                
+        ### --- Dangerous object detection --- ###
         # Checking intersection of each rectangle in path and pick.
         if path != []:
             intersections = find_intersections(path, pick, intersections)
@@ -107,14 +122,8 @@ def detect_people(folder, source, access_lvl=3):
 
         ### --- INFORMATION DISCLOSURE --- ###
         blurred = cv.blur(resized, (15,15), 0)
-        if access_lvl == 1:
-            # Tier 1: Blur out only people to preserve privacy.
-            mask = np.zeros(resized.shape[:2], dtype="uint8")
-            for rect in pick_human:
-                (startX, startY, endX, endY) = rect
-                cv.rectangle(mask, (startX, startY), (endX, endY), (255, 255, 255), -1)
-            resized[mask>0] = blurred[mask>0]
-        elif access_lvl == 2:
+        # Tier 1: Nothing changes
+        if access_lvl == 2:
             # Tier 2: Blur out everything except for the dangerous object that was detected.
             mask = np.zeros(resized.shape[:2], dtype="uint8")
             for (idx1,idx2,area,danger) in intersections:
@@ -133,12 +142,10 @@ def detect_people(folder, source, access_lvl=3):
                 (startX, startY, endX, endY) = pick[idx2]
                 # Draw black rectangle around detected dangerous object.
                 cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 255), 2)
-                cv.putText(resized, "DANGEROUS OBJECT DETECTED", (15,30),
-                    cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+                cv.putText(resized, "DANGEROUS OBJECT DETECTED", (15,30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
         
         cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
-        cv.putText(resized, str(cap.get(cv .CAP_PROP_POS_FRAMES)), (15,15),
-                    cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+        cv.putText(resized, str(cap.get(cv .CAP_PROP_POS_FRAMES)), (15,15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
         
         cv.imshow("Frame", resized)
         #cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)

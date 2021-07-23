@@ -47,8 +47,15 @@ def thirdof(a):
     y1 = a[1] + ((h // 3) * 2)
     x2 = a[2] - (w // 3)
     y2 = a[3]
-
     return [x1, y1, x2, y2]
+
+# Takes a given rectangle and returns the point in the centre of the bottom side.
+def centreof(a):
+    w = a[2] - a[0]
+    h = a[3] - a[1]
+    x = a[0] + (w // 2)
+    y = a[3]
+    return (x, y)
 
 # Given a list of rectangles representing a modeled path and objects, finds the intersections between each and returns as list of (idx1,idx2,area).
 def find_intersections(path, objects, intersections):
