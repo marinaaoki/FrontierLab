@@ -6,7 +6,7 @@ import numpy as np
 import cv2 as cv
 import os
 
-def detect_people(folder, source, access_lvl=3):
+def detect_people(folder, source, disclose_all=True):
     # Model background using Gaussian Mixture Model.
     backSub = cv.createBackgroundSubtractorMOG2()
 
@@ -104,6 +104,10 @@ def detect_people(folder, source, access_lvl=3):
         if path != []:
             intersections = find_intersections(path, pick, intersections)
 
+        # Rectangles used to model path in white
+        #for (startX, startY, endX, endY) in path:
+        #        cv.rectangle(resized, (startX, startY), (endX, endY), (255, 255, 255), 2)
+
         # Background subtraction in red
         #for (startX, startY, endX, endY) in pick:
         #            cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 255), 2)
@@ -116,40 +120,34 @@ def detect_people(folder, source, access_lvl=3):
         #for (startX, startY, endX, endY) in pick_human:
         #    cv.rectangle(resized, (startX, startY), (endX, endY), (0, 255, 0), 2)
 
-        # Rectangles used to model path in white
-        #for (startX, startY, endX, endY) in path:
-        #        cv.rectangle(resized, (startX, startY), (endX, endY), (255, 255, 255), 2)
-
         ### --- INFORMATION DISCLOSURE --- ###
         blurred = cv.blur(resized, (15,15), 0)
-        # Tier 1: Nothing changes
-        if access_lvl == 1:
+        if disclose_all:
             # Iterate through the intersections to find objects that have been determined to be dangerous.
             for (idx1,idx2,area,danger) in intersections:
                 if danger == 2:
                     (startX, startY, endX, endY) = pick[idx2]
                     # Draw black rectangle around detected dangerous object.
-                    cv.rectangle(resized, (startX, startY), (endX, endY), (255, 255, 255), 2)
+                    cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 0), 2)
                     cv.putText(resized, "DANGEROUS OBJECT DETECTED", (15,30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
-        if access_lvl == 2:
-            # Tier 2: Blur out everything except for the dangerous object that was detected.
+        else:
+            # Blur out everything except for the dangerous object that was detected.
             mask = np.zeros(resized.shape[:2], dtype="uint8")
+            # Iterate through the intersections to find objects that have been determined to be dangerous.
+            for (idx1,idx2,area,danger) in intersections:
+                if danger == 2:
+                    (startX, startY, endX, endY) = pick[idx2]
+                    # Draw filled rectangle around detected dangerous object to change mask.
+                    cv.rectangle(mask, (startX, startY), (endX, endY), (255, 255, 255), -1)
             mask = cv.bitwise_not(mask)
             resized[mask>0] = blurred[mask>0]
             # Iterate through the intersections to find objects that have been determined to be dangerous.
             for (idx1,idx2,area,danger) in intersections:
                 if danger == 2:
-                    (startX, startY, endX, endY) = pick[idx2]
                     # Draw black rectangle around detected dangerous object.
-                    cv.rectangle(resized, (startX, startY), (endX, endY), (255, 255, 255), 2)
+                    cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 0), 2)
                     cv.putText(resized, "DANGEROUS OBJECT DETECTED", (15,30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
-        elif access_lvl == 3:
-            # Tier 3: Send out only textual data -> blur everything and place text on top?
-            resized = blurred
-            for (idx1,idx2,area,danger) in intersections:
-                if danger == 2:
-                    cv.putText(resized, "DANGEROUS OBJECT DETECTED", (75,100), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
-
+        
         cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
         cv.putText(resized, "Frame " + str(cap.get(cv .CAP_PROP_POS_FRAMES)), (15,15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
         

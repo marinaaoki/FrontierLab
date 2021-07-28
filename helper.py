@@ -71,10 +71,8 @@ def find_intersections(path, objects, intersections):
                     inlist = True
                     if intersect_area == a:
                         if d == 0:
-                            del intersections[index]
                             new_intersections.append((idx1,idx2,intersect_area,1))
                         else: 
-                            del intersections[index]
                             new_intersections.append((idx1,idx2,intersect_area,2))
             if (not inlist) and (intersect_area != 0):
                 new_intersections.append((idx1,idx2,intersect_area,0))
