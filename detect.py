@@ -6,15 +6,10 @@ import numpy as np
 import cv2 as cv
 import os
 
-def detect_people(folder, source, disclose_all=True):
-    # Model background using Gaussian Mixture Model.
-    backSub = cv.createBackgroundSubtractorMOG2()
-
+def detect_people(folder, source, disclose_all=True, threshold=0.3):
     hog = cv.HOGDescriptor()
     hog.setSVMDetector(cv.HOGDescriptor_getDefaultPeopleDetector())
 
-    tracker = cv.legacy.TrackerMOSSE_create()
-    
     # Access the image stream.
     cap = cv.VideoCapture(os.path.join(source,'%03d.png'), cv.CAP_IMAGES)
     firstFrame = None
@@ -45,9 +40,13 @@ def detect_people(folder, source, disclose_all=True):
         # Initialise first frame.
         if firstFrame is None:
             firstFrame = grey
+            blurred = cv.blur(resized, (15,15), 0)
+            if not disclose_all:
+                resized = blurred
+
             cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
-            cv.putText(resized, str(cap.get(cv .CAP_PROP_POS_FRAMES)), (15,15),
-                    cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+            cv.putText(resized, "Frame " + str(cap.get(cv .CAP_PROP_POS_FRAMES)) + ", threshold=" + str(threshold), (15,15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+            cv.imshow("Frame", resized)
             cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)
             continue
 
@@ -80,7 +79,7 @@ def detect_people(folder, source, disclose_all=True):
         pick_hog = non_max_suppression(rects, overlapThresh=0.65)
            
         # Check whether "humans" detected by HOG are part of detected foreground.
-        pick_human, pick = find_fg_objects(pick, pick_hog, 0.3)
+        pick_human, pick = find_fg_objects(pick, pick_hog, threshold)
         pick_human = np.array([[x, y, w, h] for [x, y, w, h] in pick_human])
         pick_human = non_max_suppression(pick_human, overlapThresh=0.65)
 
@@ -149,10 +148,10 @@ def detect_people(folder, source, disclose_all=True):
                     cv.putText(resized, "DANGEROUS OBJECT DETECTED", (15,30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
         
         cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
-        cv.putText(resized, "Frame " + str(cap.get(cv .CAP_PROP_POS_FRAMES)), (15,15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+        cv.putText(resized, "Frame " + str(cap.get(cv .CAP_PROP_POS_FRAMES)) + ", threshold=" + str(threshold), (15,15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
         
         cv.imshow("Frame", resized)
-        #cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)
+        cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)
         
         keyboard = cv.waitKey(30)
         if keyboard == 'q' or keyboard == 27:

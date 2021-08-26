@@ -24,7 +24,7 @@ def create_stream(source):
     while True:
         save_frame(count)
         # 15 FPS
-        sleep(0.06)
+        sleep(0.25)
         count+=1
 
 

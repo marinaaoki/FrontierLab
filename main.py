@@ -1,17 +1,14 @@
 from __future__      import print_function
-from multiprocessing import Process
-from time            import sleep
-from stream          import create_stream
 from detect          import detect_people
 from helper          import save_video
 
 import os
 
 if __name__ == '__main__':
-    source = "C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\data\\newspaper"
-    folder = "C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\results\\frames\\static_for_two"
+    source = "C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\data\\eval\\video_06"
+    folder = "C:\\Users\\aokim\\Documents\\Bachelorarbeit\\opencv\\results\\eval\\06\\0.1"
     disclose_all = False
-
+    threshold=0.1
     #p1 = Process(target=create_stream)
     #p1.start()
 
@@ -23,5 +20,5 @@ if __name__ == '__main__':
 
     #create_stream(source)
     #save_video(source)
-    detect_people(folder, source, disclose_all)
-    #save_video(folder)
+    detect_people(folder, source, disclose_all, threshold)
+    save_video(folder)
