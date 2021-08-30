@@ -105,7 +105,7 @@ def save_video(folder):
         height, width, layers = img.shape
         size = (width, height)
         img_array.append(img)
-    out = cv.VideoWriter(os.path.join(folder,"video.avi"), cv.VideoWriter_fourcc(*'DIVX'), 15, size)
+    out = cv.VideoWriter(os.path.join(folder,"video.avi"), cv.VideoWriter_fourcc(*'DIVX'), 4, size)
 
     for i in range(len(img_array)):
         out.write(img_array[i])
