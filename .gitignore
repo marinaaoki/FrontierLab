@@ -1,4 +1,8 @@
 **/
 
+!data/
+!data/eval/
 !data/eval/*
+!results/
+!results/eval/
 !results/eval/*
