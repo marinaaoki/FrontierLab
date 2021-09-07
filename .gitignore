@@ -5,4 +5,4 @@
 !data/eval/*
 !results/
 !results/eval/
-!results/eval/*
+!results/eval/**
