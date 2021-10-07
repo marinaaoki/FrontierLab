@@ -203,9 +203,9 @@ def risk_notification(folder, source, disclose_all, threshold):
     risk_lvl = detect_people(folder, source, disclose_all, threshold)
     ### --- RISK LEVEL-BASED INFORMATION DISCLOSURE --- #
     if risk_lvl == 0:
-        print("Low risk level.\nSend update in weekly report.")
+        print("\nLow risk level.\nSend update in weekly report.")
     elif risk_lvl == 1:
-        print("Medium risk level.\nNotify primary caregiver.")
+        print("\nMedium risk level.\nNotify primary caregiver.")
     elif risk_lvl == 2:
-        print("High risk level.\nSend urgent warning notification to primary caregiver.")
+        print("\nHigh risk level.\nSend urgent warning notification to primary caregiver.")
 
