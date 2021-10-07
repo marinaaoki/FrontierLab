@@ -1,6 +1,6 @@
 from __future__ import print_function
 import numpy as np
-import cv2 as cv
+import cv2   as cv
 import glob
 import os
 
@@ -34,20 +34,21 @@ def area_of_intersection(a,b):
     return dx * dy
 
 # Returns the area of the given rectangle.
-def area(a):
+def areaof(a):
     dx = a[2] - a[0]
     dy = a[3] - a[1]
     return dx * dy
 
 # Takes a given rectangle and returns the rectangle comprising of the bottom third widthwise and middle third lengthwise.
 def thirdof(a):
-    w = a[2] - a[0]
-    h = a[3] - a[1]
-    x1 = a[0] + (w // 3)
-    y1 = a[1] + ((h // 3) * 2)
-    x2 = a[2] - (w // 3)
-    y2 = a[3]
-    return [x1, y1, x2, y2]
+    (x1, y1, x2, y2) = a
+    w = x2 - x1
+    h = y2 - y1
+    thirdx1 = x1 + (w // 3)
+    thirdy1 = y1 + ((h // 3) * 2)
+    thirdx2 = x2 - (w // 3)
+    thirdy2 = y2
+    return [thirdx1, thirdy1, thirdx2, thirdy2]
 
 # Takes a given rectangle and returns the point in the centre of the bottom side.
 def centreof(a):
@@ -86,7 +87,7 @@ def find_fg_objects(pick_fg, pick_hog, threshold):
         for rect2 in pick_hog:
             # If there is an intersection that takes up at least the given threshold of pick_hog rectangle, take union of both boxes.
             if intersection(rect1, rect2) != [0,0,0,0]:
-                fraction = area_of_intersection(rect1, rect2) / area(rect2)
+                fraction = area_of_intersection(rect1, rect2) / areaof(rect2)
                 if fraction >= threshold:
                     union_of = union(rect1, rect2)
                     pick_total.append(union_of)
