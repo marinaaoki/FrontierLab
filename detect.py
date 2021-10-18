@@ -2,11 +2,13 @@ from __future__               import print_function
 from imutils.object_detection import non_max_suppression
 from helper                   import find_fg_objects, thirdof, centreof, find_intersections, areaof
 from fuzzy                    import fuzzy_infer
-from sklearn.preprocessing    import normalize
 
 import numpy as np
 import cv2   as cv
 import os
+
+import pandas as pd
+import copy
 
 def detect_people(folder, source, disclose_all=True, threshold=0.3):
     # Initialise HOG feature descriptor.
@@ -106,18 +108,18 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
             #    centres.append(centreof(step))
 
             step = thirdof(rect)
+            [thirdx1, thirdy1, thirdx2, thirdy2] = step
             path.append(step)
             centres.append(centreof(step))
 
             #Increment pixel values of matrix by 1 as counter of path frequency.
-            for i in range(x1, x2):
-                for j in range(y1, y2):
-                    #print("x1: " + str(x1) + ", y1: " + str(y1) + "\nx2: " + str(x2) + ", y2: " + str(y2) + "\n")
+            for i in range(thirdx1, thirdx2):
+                for j in range(thirdy1, thirdy2):
                     matrix[i-1][j-1] += 1
 
         if not np.all((matrix == 0)) and pick_human != []: 
             # Normalise matrix.
-            normed = normalize(matrix, axis=1, norm='l2')
+            normed = matrix / np.linalg.norm(matrix)
 
         ### -- Drawing trajectory --- ###
         #for p1, p2 in zip(centres, centres[1:]):
@@ -147,6 +149,9 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
         ### --- INFORMATION DISCLOSURE --- ###
         blurred = cv.blur(resized, (15,15), 0)
         if disclose_all:
+
+            grid = cv.cvtColor(copy.deepcopy(resized),cv.COLOR_BGR2GRAY) 
+
             # Iterate through the intersections to find objects that have been determined to be dangerous.
             for (idx1,idx2,area,danger) in intersections:
                 if danger == 2:
@@ -154,7 +159,7 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
 
                     ### --- FUZZY INFERENCE --- ###
                     sliced = normed[startX:endX, startY:endY]
-                    risk_lvl = fuzzy_infer(sliced, pick[idx2])
+                    #risk_lvl = fuzzy_infer(sliced, pick[idx2])
                     
                     # Draw black rectangle around detected dangerous object.
                     cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 0), 2)
@@ -172,6 +177,9 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
 
             mask = cv.bitwise_not(mask)
             resized[mask>0] = blurred[mask>0]
+
+            grid = cv.cvtColor(copy.deepcopy(resized),cv.COLOR_BGR2GRAY) 
+
             # Iterate through the intersections to find objects that have been determined to be dangerous.
             for (idx1,idx2,area,danger) in intersections:
                 if danger == 2:
@@ -179,7 +187,7 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
 
                     ### --- FUZZY INFERENCE --- ###
                     sliced = normed[startX:endX, startY:endY]
-                    risk_lvl = fuzzy_infer(sliced, pick[idx2])
+                    #risk_lvl = fuzzy_infer(sliced, pick[idx2])
 
                     # Draw black rectangle around detected dangerous object.
                     cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 0), 2)
@@ -188,8 +196,46 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
         cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
         cv.putText(resized, "Frame " + str(cap.get(cv .CAP_PROP_POS_FRAMES)) + ", threshold=" + str(threshold), (15,15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
         
-        cv.imshow("Frame", resized)
+        accumulated = np.zeros((HEIGHT // 20, WIDTH // 20))
+        for i in range((WIDTH // 20)):
+            for j in range((HEIGHT // 20)):
+                orig_i = i * 20
+                orig_j = j * 20
+                accumulated[j][i] = np.sum(matrix[orig_j:orig_j+20, orig_i:orig_i+20])
+        
+        #if not np.all((accumulated == 0)): 
+            #accumulated = normalize(accumulated, axis=1, norm='l2')
+            #accumulated = accumulated / np.linalg.norm(accumulated)
+
+        df = pd.DataFrame(accumulated)
+        #_frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".csv"), sep=';', decimal=',')
+
+        for x in np.linspace(start=20, stop=380, num=19):
+            x = int(round(x))
+            cv.line(grid, (x, 0), (x, 300), (0, 0, 0), 1, 1)
+
+        for y in np.linspace(start=20, stop=280, num=14):
+            y = int(round(y))
+            cv.line(grid, (0, y), (400, y), (0, 0, 0), 1, 1)
+
+
+        grid = cv.resize(grid, (1200, 900))
+        grid = cv.cvtColor(grid, cv.COLOR_GRAY2RGB) 
+
+        for i in range(20):
+            for j in range(15):
+                orig_i = i * 60 + 10
+                orig_j = j * 60 + 40
+                cv.putText(grid, str(int(accumulated[j][i])),
+                    (orig_i,orig_j),
+                    cv.FONT_HERSHEY_SIMPLEX, 
+                    0.5,
+                    (255,0,0),
+                    2)
+
+        cv.imshow("Frame", grid)
         #cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)
+        #cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), grid)
         
         keyboard = cv.waitKey(30)
         if keyboard == 'q' or keyboard == 27:
@@ -205,7 +251,7 @@ def risk_notification(folder, source, disclose_all, threshold):
     if risk_lvl == 0:
         print("\nLow risk level.\nSend update in weekly report.")
     elif risk_lvl == 1:
-        print("\nMedium risk level.\nNotify primary caregiver.")
+        print("\nMedium risk level.\nSend update in daily report.")
     elif risk_lvl == 2:
         print("\nHigh risk level.\nSend urgent warning notification to primary caregiver.")
 

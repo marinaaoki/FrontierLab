@@ -9,7 +9,7 @@ import os
 import re
 import glob
 
-pandas = "/Users/marina/introcs/Bachelorarbeit/opencv/results/pandas/17/"
+pandas = "/Users/marina/introcs/Bachelorarbeit/opencv/results/figure/12/"
 
 def fuzzy_infer(matrix, coords):
     FS = FuzzySystem()
@@ -21,10 +21,11 @@ def fuzzy_infer(matrix, coords):
     size = areaof(coords)
     
     # Define linguistic variable density and its trapezoidal membership function.
-    D_1 = FuzzySet(points=[[0, 1.], [0.015, 1.], [0.04, 0]], term="low")
-    D_2 = FuzzySet(points=[[0.01, 0], [0.02, 1.], [0.06, 1.], [0.07, 0]], term="medium")
-    D_3 = FuzzySet(points=[[0.06, 0], [0.08, 1.], [0.09, 1.]], term="high")
-    FS.add_linguistic_variable("Density", LinguisticVariable([D_1, D_2, D_3], concept="Path density", universe_of_discourse=[0,0.09]))
+    # TODO: Redefine density function.
+    D_1 = FuzzySet(points=[[0, 1.], [0.015, 1.], [0.08, 0]], term="low")
+    D_2 = FuzzySet(points=[[0.01, 0], [0.07, 1.], [0.1, 1.], [0.5, 0]], term="medium")
+    D_3 = FuzzySet(points=[[0.4, 0], [0.45, 1.], [0.6, 1.]], term="high")
+    FS.add_linguistic_variable("Density", LinguisticVariable([D_1, D_2, D_3], concept="Path density", universe_of_discourse=[0,0.6]))
     
     # Define linguistic variable size and its trapezoidal membership function.
     S_1 = FuzzySet(points=[[0, 1.], [1800, 1.], [2100, 0.]], term="small")
@@ -58,6 +59,8 @@ def fuzzy_infer(matrix, coords):
     risk = FS.Mamdani_inference(["Risk"])
     result = risk["Risk"]
 
+    #FS.plot_variable("Density")
+
     return round(result)
     
 def save_norms(matrix, frame):
@@ -67,8 +70,6 @@ def save_norms(matrix, frame):
         df = pd.DataFrame(matrix)
         df.fillna(0, inplace=True)
 
-        #for col in df:
-        #    df[col] = df[col].sort_values(ignore_index=True, ascending=False)
         df.to_csv(filename)
         return df
 
@@ -84,10 +85,10 @@ def get_values():
     means = []
     stds = []
 
-    folder = "/Users/marina/introcs/Bachelorarbeit/opencv/results/pandas/"
+    folder = "/Users/marina/introcs/Bachelorarbeit/opencv/results/figure/"
     subdirectories = [x for x in os.listdir(folder) if x.isdigit()]
     subdirectories.sort()
-
+    
     for subfolder in subdirectories:
         # Get highest frame file in directory.
         files = [float(os.path.basename(os.path.splitext(filename)[0])) for filename in [f for f in glob.glob(os.path.join(os.path.join(folder, subfolder), '*')) if os.path.isfile(f)]]
@@ -108,7 +109,7 @@ def get_values():
         min_values.append(min_value)
         means.append(mean)
         stds.append(std)
-
+    
     values_dict['video'] = videos
     values_dict['norm'] = norms
     values_dict['max'] = max_values
@@ -117,7 +118,7 @@ def get_values():
     values_dict['std'] = stds
 
     df = pd.DataFrame(data=values_dict)
-    df.to_csv("/Users/marina/introcs/Bachelorarbeit/opencv/results/pandas/values.csv", sep=';', decimal=',')
+    df.to_csv("/Users/marina/introcs/Bachelorarbeit/opencv/results/figure/values.csv", sep=';', decimal=',')
 
     return df
 
@@ -179,7 +180,7 @@ def draw_density():
     ax.xaxis.set_ticks(np.arange(0, 0.09, 0.01))
     plt.legend()
 
-    plt.show()
+    #plt.show()
     #plt.savefig("/Users/marina/introcs/Bachelorarbeit/opencv/results/pandas/density.png")
     plt.close()
 
