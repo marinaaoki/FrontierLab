@@ -1,36 +1,30 @@
 from __future__               import print_function
 from imutils.object_detection import non_max_suppression
-from helper                   import find_fg_objects, thirdof, centreof, find_intersections, areaof
+from helper                   import find_fg_objects, thirdof, find_intersections, areaof
 from fuzzy                    import fuzzy_infer
 
 import numpy as np
 import cv2   as cv
 import os
 
-import pandas as pd
-import copy
-
-def detect_people(folder, source, disclose_all=True, threshold=0.3):
-    # Initialise HOG feature descriptor.
-    hog = cv.HOGDescriptor()
-    hog.setSVMDetector(cv.HOGDescriptor_getDefaultPeopleDetector())
-
+def detect_people(source: str, disclose_all: bool = True, threshold: float = 0.3) -> int:
     # Access the image stream.
     cap = cv.VideoCapture(os.path.join(source,'%03d.png'), cv.CAP_IMAGES)
     firstFrame = None
-    # Rectangles modeling frequently used path.
-    path = []
-    # Centres of rectangles to enable trajectory modeling.
-    centres = []
-    # Tuples of (idx1,idx2,area) storing intersections between objects and path rectangles.
-    intersections = []
-
-    # Initialise risk level.
-    risk_lvl = -1
 
     if not cap.isOpened():
         print('Unable to open')
         exit(0)
+    
+    # Intialise HOG feature descriptor.
+    hog = cv.HOGDescriptor()
+    hog.setSVMDetector(cv.HOGDescriptor_getDefaultPeopleDetector())
+
+    path = []
+    intersections = []
+    sizes = []
+    human_size = 1
+    risk_lvl = -1
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -38,11 +32,8 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
         if frame is None:
             break
 
-        # Resize frame for faster processing.
         resized = cv.resize(frame, (400, 300))
-        # Greyscale of resized image.
         grey = cv.cvtColor(resized, cv.COLOR_BGR2GRAY)
-        # Extract height and width for full-body detection.
         (HEIGHT, WIDTH) = resized.shape[:2]
 
         # Initialise first frame.
@@ -55,15 +46,14 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
             # Initialise matrix represenation of image with 0s.
             matrix = np.zeros((WIDTH, HEIGHT))
 
+            # Frame display.
             cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
             cv.putText(resized, "Frame " + str(cap.get(cv .CAP_PROP_POS_FRAMES)) + ", threshold=" + str(threshold), (15,15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
             cv.imshow("Frame", resized)
-            #cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)
             continue
 
         ### --- Static background subtraction --- ###
         img_diff = cv.absdiff(firstFrame, grey)
-        # Threshold image
         ret, thresh = cv.threshold(img_diff, 25, 255, cv.THRESH_BINARY)
         thresh = cv.dilate(thresh, None, iterations=2)
         contours = cv.findContours(thresh.copy(), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)[0]
@@ -75,7 +65,6 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
             (x, y, w, h) = cv.boundingRect(c)
             boxes.append((x, y, x+w, y+h))
         boxes = np.array(boxes)
-        # Non-maxima suppression to get rid of overlapping boxes.
         pick = non_max_suppression(boxes, overlapThresh=0.3)
         # Get rid of rectangles that are the same size as the entire frame.
         x_max = resized.shape[1]
@@ -83,7 +72,6 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
         for idx, lst in enumerate(pick):
             if (lst[2] >= x_max) and (lst[3] >= y_max):
                 pick = np.delete(pick, obj=idx, axis=0)
-
         
         ### --- HOG people detection --- ###
         rects, weights = hog.detectMultiScale(grey, winStride=(4,4), padding=(8,8), scale=1.05)
@@ -97,78 +85,53 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
 
         ### --- Path modeling --- ###
         for rect in pick_human:
-            # Take bottom third of pick_human rectangles to model path.
-            # Only if the rectangle is at least a certain height (1/3 of the total frame height)
             (x1, y1, x2, y2) = rect
             H = x2 - x1
             W = y2 - y1
-            #if H <= HEIGHT // 3 or W <= WIDTH // 3:
-            #    step = thirdof(rect)
-            #    path.append(step)
-            #    centres.append(centreof(step))
-
+            # Take bottom third of pick_human rectangles to model path.
             step = thirdof(rect)
             [thirdx1, thirdy1, thirdx2, thirdy2] = step
             path.append(step)
-            centres.append(centreof(step))
+
+            # Calculate the area of each detected human.
+            size = areaof(rect)
+            sizes.append(size)
 
             #Increment pixel values of matrix by 1 as counter of path frequency.
             for i in range(thirdx1, thirdx2):
                 for j in range(thirdy1, thirdy2):
                     matrix[i-1][j-1] += 1
+        
+        if sizes != []:
+            # Calculate average human size for fuzzy inference.
+            human_size = np.mean(sizes)
 
         if not np.all((matrix == 0)) and pick_human != []: 
-            # Normalise matrix.
             normed = matrix / np.linalg.norm(matrix)
 
-        ### -- Drawing trajectory --- ###
-        #for p1, p2 in zip(centres, centres[1:]):
-        #    cv.arrowedLine(resized, p1, p2, (255,0,0), 2)
-                
         ### --- Dangerous object detection --- ###
-        # Checking intersection of each rectangle in path and pick.
         if path != []:
             intersections = find_intersections(path, pick, intersections)
-
-        # Rectangles used to model path in white
-        #for (startX, startY, endX, endY) in path:
-        #        cv.rectangle(resized, (startX, startY), (endX, endY), (255, 255, 255), 2)
-
-        # Background subtraction in red
-        #for (startX, startY, endX, endY) in pick:
-        #            cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 255), 2)
-        
-        # HOG for human detection in blue
-        #for (startX, startY, endX, endY) in pick_hog:
-        #            cv.rectangle(resized, (startX, startY), (endX, endY), (255, 0, 0), 2)
-
-        # Union in green
-        #for (startX, startY, endX, endY) in pick_human:
-        #    cv.rectangle(resized, (startX, startY), (endX, endY), (0, 255, 0), 2)
 
         ### --- INFORMATION DISCLOSURE --- ###
         blurred = cv.blur(resized, (15,15), 0)
         if disclose_all:
-
-            grid = cv.cvtColor(copy.deepcopy(resized),cv.COLOR_BGR2GRAY) 
-
-            # Iterate through the intersections to find objects that have been determined to be dangerous.
             for (idx1,idx2,area,danger) in intersections:
                 if danger == 2:
                     (startX, startY, endX, endY) = pick[idx2]
 
                     ### --- FUZZY INFERENCE --- ###
                     sliced = normed[startX:endX, startY:endY]
-                    #risk_lvl = fuzzy_infer(sliced, pick[idx2])
+                    prop = areaof(pick[idx2]) / human_size
+
+                    risk_lvl = fuzzy_infer(sliced, prop)
                     
-                    # Draw black rectangle around detected dangerous object.
+                    # Display dangerous objects.
                     cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 0), 2)
-                    cv.putText(resized, "DANGEROUS OBJECT DETECTED", (15,30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+                    cv.putText(resized, "OBJECT DETECTED" + str(risk_lvl), (15,30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
                     
         else:
-            # Blur out everything except for the dangerous object that was detected.
             mask = np.zeros(resized.shape[:2], dtype="uint8")
-            # Iterate through the intersections to find objects that have been determined to be dangerous.
             for (idx1,idx2,area,danger) in intersections:
                 if danger == 2:
                     (startX, startY, endX, endY) = pick[idx2]
@@ -178,75 +141,34 @@ def detect_people(folder, source, disclose_all=True, threshold=0.3):
             mask = cv.bitwise_not(mask)
             resized[mask>0] = blurred[mask>0]
 
-            grid = cv.cvtColor(copy.deepcopy(resized),cv.COLOR_BGR2GRAY) 
-
-            # Iterate through the intersections to find objects that have been determined to be dangerous.
             for (idx1,idx2,area,danger) in intersections:
                 if danger == 2:
                     (startX, startY, endX, endY) = pick[idx2]
 
                     ### --- FUZZY INFERENCE --- ###
                     sliced = normed[startX:endX, startY:endY]
-                    #risk_lvl = fuzzy_infer(sliced, pick[idx2])
+                    prop = areaof(pick[idx2]) / human_size
 
-                    # Draw black rectangle around detected dangerous object.
+                    risk_lvl = fuzzy_infer(sliced, prop)
+
+                    # Display dangerous objects.
                     cv.rectangle(resized, (startX, startY), (endX, endY), (0, 0, 0), 2)
-                    cv.putText(resized, "DANGEROUS OBJECT DETECTED", (15,30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+                    cv.putText(resized, "OBJECT DETECTED" + str(risk_lvl), (15,30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
         
+        # Frame display.
         cv.rectangle(resized, (10,2), (100,2), (255,255,255), -1)
         cv.putText(resized, "Frame " + str(cap.get(cv .CAP_PROP_POS_FRAMES)) + ", threshold=" + str(threshold), (15,15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
-        
-        accumulated = np.zeros((HEIGHT // 20, WIDTH // 20))
-        for i in range((WIDTH // 20)):
-            for j in range((HEIGHT // 20)):
-                orig_i = i * 20
-                orig_j = j * 20
-                accumulated[j][i] = np.sum(matrix[orig_j:orig_j+20, orig_i:orig_i+20])
-        
-        #if not np.all((accumulated == 0)): 
-            #accumulated = normalize(accumulated, axis=1, norm='l2')
-            #accumulated = accumulated / np.linalg.norm(accumulated)
+        cv.imshow("Frame", resized)
 
-        df = pd.DataFrame(accumulated)
-        #_frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".csv"), sep=';', decimal=',')
-
-        for x in np.linspace(start=20, stop=380, num=19):
-            x = int(round(x))
-            cv.line(grid, (x, 0), (x, 300), (0, 0, 0), 1, 1)
-
-        for y in np.linspace(start=20, stop=280, num=14):
-            y = int(round(y))
-            cv.line(grid, (0, y), (400, y), (0, 0, 0), 1, 1)
-
-
-        grid = cv.resize(grid, (1200, 900))
-        grid = cv.cvtColor(grid, cv.COLOR_GRAY2RGB) 
-
-        for i in range(20):
-            for j in range(15):
-                orig_i = i * 60 + 10
-                orig_j = j * 60 + 40
-                cv.putText(grid, str(int(accumulated[j][i])),
-                    (orig_i,orig_j),
-                    cv.FONT_HERSHEY_SIMPLEX, 
-                    0.5,
-                    (255,0,0),
-                    2)
-
-        cv.imshow("Frame", grid)
-        #cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), resized)
-        #cv.imwrite(os.path.join(folder, "frame_" + str((cap.get(cv .CAP_PROP_POS_FRAMES))) + ".png"), grid)
-        
         keyboard = cv.waitKey(30)
         if keyboard == 'q' or keyboard == 27:
             break
         
     cap.release()
     return risk_lvl
-    
 
-def risk_notification(folder, source, disclose_all, threshold):
-    risk_lvl = detect_people(folder, source, disclose_all, threshold)
+def risk_notification(source: str, disclose_all: bool, threshold: float):
+    risk_lvl = detect_people(source, disclose_all, threshold)
     ### --- RISK LEVEL-BASED INFORMATION DISCLOSURE --- #
     if risk_lvl == 0:
         print("\nLow risk level.\nSend update in weekly report.")

@@ -102,7 +102,7 @@ def find_fg_objects(pick_fg, pick_hog, threshold):
 # Save all the image files in a folder as a video.
 def save_video(folder):
     img_array = []
-    for filename in sorted(glob.glob(os.path.join(folder, "*.png")), key=len):
+    for filename in sorted(glob.glob(os.path.join(folder, "*.png"))):
         img = cv.imread(filename)
         height, width, layers = img.shape
         size = (width, height)
