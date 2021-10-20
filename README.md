@@ -1,5 +1,7 @@
 # Fall risk detection system
-This project was developed for the FrontierLab@Osaka program at Osaka University in the 2021 Spring/Summer term under the supervision of Prof. Maekawa at the Hara Laboratory. The system detects potentially dangerous objects in frequently-used paths in videos recorded within homes and aims to reduce the risk of falls for older adults while considering information disclosure. The aim of the research was to discover the greatest difficulties faced by older adults and their informal caregivers during their communication with one another in their daily lives. To do so, I analysed interviews with informal caregivers using the SCAT method and used the results to develop design guidelines that would facilititate information acquistion for the remote caregivers of independently lliving eldelry.
+This project was developed for the FrontierLab@Osaka program at Osaka University in the 2021 Spring/Summer term under the supervision of Prof. Maekawa at the Hara Laboratory. 
+
+The system detects potentially dangerous objects in frequently-used paths in videos recorded within homes and aims to reduce the risk of falls for older adults while considering information disclosure. The aim of the research was to discover the greatest difficulties faced by older adults and their informal caregivers during their communication with one another in their daily lives. To do so, I analysed interviews with informal caregivers using the SCAT method and used the results to develop design guidelines that would facilititate information acquistion for the remote caregivers of independently lliving eldelry.
 
 # Technologies used
 * Python
