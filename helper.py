@@ -98,17 +98,3 @@ def find_fg_objects(pick_fg, pick_hog, threshold):
     if to_delete != []:
         pick_fg = np.delete(pick_fg, to_delete, axis=0)
     return pick_total, pick_fg
-
-# Save all the image files in a folder as a video.
-def save_video(folder):
-    img_array = []
-    for filename in sorted(glob.glob(os.path.join(folder, "*.png"))):
-        img = cv.imread(filename)
-        height, width, layers = img.shape
-        size = (width, height)
-        img_array.append(img)
-    out = cv.VideoWriter(os.path.join(folder,"video.avi"), cv.VideoWriter_fourcc(*'DIVX'), 4, size)
-
-    for i in range(len(img_array)):
-        out.write(img_array[i])
-    out.release()
