@@ -1,7 +1,7 @@
 # Fall risk detection system
 This project was developed for the FrontierLab@Osaka program at Osaka University in the 2021 Spring/Summer term under the supervision of Prof. Maekawa at the Hara Laboratory and was used as the basis for my bachelor's thesis.
 
-The system detects potentially dangerous objects in frequently-used paths in videos recorded within homes and aims to reduce the risk of falls for older adults while considering information disclosure. The aim of the research was to discover the greatest difficulties faced by older adults and their informal caregivers during their communication with one another in their daily lives. To do so, I analysed interviews with informal caregivers using the SCAT method and used the results to develop design guidelines that would facilititate information acquistion for the remote caregivers of independently lliving eldelry.
+The system detects potentially dangerous objects in frequently-used paths in videos recorded within homes and aims to reduce the risk of falls for older adults while considering information disclosure. The aim of the research was to discover the greatest difficulties faced by older adults and their informal caregivers during their communication with one another in their daily lives. To do so, I analysed interviews with informal caregivers using the SCAT method and used the results to develop design guidelines that would facilititate information acquistion for the remote caregivers of independently living eldelry.
 
 # Technologies used
 * Python
@@ -22,5 +22,13 @@ The assumed environment for the system involves a camera that is installed to mo
 [Demo video](https://youtu.be/ouGXjtGewBQ "Demo video")
 
 A newspaper left on the ground is detected by the system.
+
+# How to Use
+
+1. Clone the repository by running `git clone https://github.com/marinaaoki/FrontierLab.git`.
+
+2. Install all the required packages as specified in the [requirements](/requirements.txt "Requirements").
+
+3. Use the data files provided in the LRZ Sync+Share folder as input. Configure the file paths, navigate to the project directory, then run using `python main.py`. The output will be shown in the terminal depending on the determined risk level.
 
 
