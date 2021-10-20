@@ -13,11 +13,11 @@ The assumed environment for the system involves a camera that is installed to mo
 
 # Dangerous Object Detection Algorithm
 
-![picture alt](/figures/process.png "Flowchart")
+![picture alt](/images/process.png "Flowchart")
 
 # Demo
 
-![picture alt](/figures/selective-blurring.png "Flowchart")
+![picture alt](/images/selective-blurring.png "Flowchart")
 
 [Demo video](https://youtu.be/ouGXjtGewBQ "Demo video")
 
