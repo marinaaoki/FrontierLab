@@ -1,4 +1,4 @@
-numpy==1.21.2
+numpy>=1.22
 opencv_contrib_python_headless==4.5.3.56
 simpful==2.5.0
 imutils==0.5.4
